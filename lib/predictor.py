@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-import os, time, sys, sqlite3
 from pprint import pprint
+
 import pandas as pd
 from catboost import CatBoostClassifier
 
-# os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import element
 import http_get
 from get_features import get_features
@@ -38,19 +37,12 @@ def get_predictor():
 
     def predict_labels(content, type='labels'):
         features = get_features(content)
-        # print(f'Blocks from predictor {len(features)}')
         data = pd.DataFrame.from_records(features, columns=columns)
         data = data.set_index('id')
-        # ------------------------
-        # drop rare
         data = data.drop(drop_cols, 1, errors='ignore')
-        # ------------------------
-        # ma_num_chars
         data['ma_num_chars'] = data['self_num_chars'] / data['self_num_chars'].max()
         data['ma_num_chars'] = data['ma_num_chars'].rolling(5, min_periods=1, center=True).mean()
-        # ------------------------
         data = data.drop(['label', 'text', 'url', 'order', 'domain'], 1, errors='ignore')
-        # data.domain = -1
         data[categorical_cols] = data[categorical_cols].fillna('NA')
         data[text_cols] = data[text_cols].fillna('')
         if type == 'labels':
