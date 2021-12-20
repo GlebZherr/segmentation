@@ -1,20 +1,16 @@
 #!/usr/bin/env python
-import os, time, sys, sqlite3
+import time, sys, sqlite3
 from pprint import pprint
-from random import choice
 import urllib.request
 import urllib.error
 import urllib.parse
 from lxml.html.clean import Cleaner
-from lxml import etree, html
 import regex as re
 import pandas as pd
 from razdel import sentenize
-from itertools import takewhile
 
-sys.path.insert(0, '.')
+sys.path.insert(0, '../lib')
 import element
-import http_get
 
 
 def get_text_blocks(content):

@@ -1,42 +1,33 @@
-#!/usr/bin/env python
-import os, time, sys, sqlite3, re
-from random import choice
-from flask import Flask, render_template, url_for, request, redirect, \
-    current_app, g, flash, jsonify, send_from_directory
-from flask import session
-# from flask_session import Session
-# import urllib.request
-# import urllib.error
-# import urllib.parse
+import os
+import re
+import sqlite3
 from urllib.parse import urlparse, urlunparse, unquote
-# from lxml.html.clean import Cleaner
-# from lxml import etree
-from pprint import pprint
 
-import logging
-format = '%(asctime)s %(name)s %(threadName)s %(levelname)s: %(message)s'
-logging.basicConfig(level=logging.INFO, format=format)
+from flask import Flask, render_template, url_for, request, redirect, \
+    g, jsonify
 
-sys.path.insert(0, '../lib')
-import element
-import http_get
-from predictor import get_predictor, get_text_blocks
+from web_text_extraction import element, http_get
+from web_text_extraction.predictor import get_predictor
+from web_text_extraction.log import setup_logging
+
+
+setup_logging()
+
 
 app = Flask(__name__)
-# sess = Session()
 app.debug = True
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['ENV'] = 'development'
+# TODO: do something with this shit
 app.secret_key = '4FjSQZVlzYfCZR1y5sFoU4Xy8bDmlarte5dfgHG'
 
-# ------------------------------------------
-# Variables
-# ------------------------------------------
+
 BLOCKS_DB = '../data/blocks.sqlite'
 EXAMPLES_DB = '../data/examples.sqlite'
 USER_AGENT = 'Mozilla/5.0 (compatible; YandexBlogs/0.99; robot; +http://yandex.com/bots)'
 TIMEOUT = 30
 predictor = get_predictor()
+
 
 # ------------------------------------------
 # Отключение кэширования статики
@@ -72,11 +63,13 @@ def get_db(name):
         db = g._database = sqlite3.connect(db_name)
     return db
 
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
+
 
 # ------------------------------------------
 # Utils
@@ -88,6 +81,7 @@ def convert_from_punycode(uri):
         return urlunparse(o._replace(netloc=puri))
     else:
         return uri
+
 
 def get_domain(url):
     o = urlparse(url)
@@ -106,9 +100,11 @@ def index():
         data['id_url'] = request.values.get('id_url', type=int, default=0)
         count_blocks = 0
         if data['id_url']:
-            cur.execute("SELECT url FROM urls WHERE id_url=:id_url", {'id_url': data['id_url']})
+            cur.execute("SELECT url FROM urls WHERE id_url=:id_url",
+                        {'id_url': data['id_url']})
             data['url'] = cur.fetchall()[0][0]
-            cur.execute("SELECT count(1) FROM blocks WHERE id_url=:id_url", {'id_url': data['id_url']})
+            cur.execute("SELECT count(1) FROM blocks WHERE id_url=:id_url",
+                        {'id_url': data['id_url']})
             count_blocks = cur.fetchall()[0][0]
             print(f'Blocks from BD {count_blocks}')
 
@@ -116,8 +112,9 @@ def index():
         if 'url' in data:
             if count_blocks == 0:
                 content = http_get.get_text(data['url'])
-                cur.execute("UPDATE urls SET content=:content WHERE id_url=:id_url",
-                            {'content': content, 'id_url': data['id_url']})
+                cur.execute(
+                    "UPDATE urls SET content=:content WHERE id_url=:id_url",
+                    {'content': content, 'id_url': data['id_url']})
                 conn.commit()
 
                 tree = element.http_get_content(text=content.strip())
@@ -126,16 +123,17 @@ def index():
                 for i, (text, tag, address) in enumerate(blocks):
                     cur.execute('''INSERT INTO blocks (id_url, tag, address, page_order, text, text_length)
                                    VALUES (:id_url, :tag, :address, :order, :text, :text_length)''',
-                                   {'text': text,
-                                    'tag': tag,
-                                    'order': i,
-                                    'address': address,
-                                    'id_url': data['id_url'],
-                                    'text_length': len(text)})
+                                {'text': text,
+                                 'tag': tag,
+                                 'order': i,
+                                 'address': address,
+                                 'id_url': data['id_url'],
+                                 'text_length': len(text)})
                 conn.commit()
 
-            cur.execute("SELECT id_block, label, tag, page_order, text FROM blocks WHERE id_url=:id_url",
-                        {'id_url': data['id_url']})
+            cur.execute(
+                "SELECT id_block, label, tag, page_order, text FROM blocks WHERE id_url=:id_url",
+                {'id_url': data['id_url']})
             data['blocks'] = []
             for row in cur.fetchall():
                 (id_block, label, tag, page_order, text) = row
@@ -157,7 +155,8 @@ def examples():
     with app.app_context():
         conn = get_db('examples')
         cur = conn.cursor()
-        cur.execute('''SELECT domain, count(1) FROM pages WHERE result=1 GROUP BY domain ORDER BY domain''')
+        cur.execute(
+            '''SELECT domain, count(1) FROM pages WHERE result=1 GROUP BY domain ORDER BY domain''')
 
         domains = []
         for domain, count in cur.fetchall():
@@ -179,8 +178,9 @@ def example_items():
         conn = get_db('examples')
         cur = conn.cursor()
         data['domain'] = request.values.get('domain', type=str)
-        cur.execute('''SELECT id_page, url, content FROM pages WHERE domain=:domain AND result=1''',
-                    {'domain': data['domain']})
+        cur.execute(
+            '''SELECT id_page, url, content FROM pages WHERE domain=:domain AND result=1''',
+            {'domain': data['domain']})
 
         items = []
         for id_page, url, content in cur.fetchall():
@@ -222,7 +222,7 @@ def get_question():
 # ------------------------------------------------
 # AJAX-запрос запись метки
 # ------------------------------------------------
-@app.route('/set_label', methods=['GET','POST'])
+@app.route('/set_label', methods=['GET', 'POST'])
 def set_label():
     data = {}
     with app.app_context():
@@ -232,11 +232,13 @@ def set_label():
         checked = request.values.get('checked', type=str)
         name = request.values.get('name', type=str)
         if checked == 'false':
-            cur.execute("UPDATE blocks SET label=:label WHERE id_block=:id_block",
-                        {'label': None, 'id_block': id_block})
+            cur.execute(
+                "UPDATE blocks SET label=:label WHERE id_block=:id_block",
+                {'label': None, 'id_block': id_block})
         else:
-            cur.execute("UPDATE blocks SET label=:label WHERE id_block=:id_block",
-                        {'label': name, 'id_block': id_block})
+            cur.execute(
+                "UPDATE blocks SET label=:label WHERE id_block=:id_block",
+                {'label': name, 'id_block': id_block})
         conn.commit()
         print(f'{id_block} {name} {checked}')
         data['result'] = 'OK'
@@ -247,7 +249,7 @@ def set_label():
 # ------------------------------------------------
 # AJAX-запрос список всех сохраненных url-ов
 # ------------------------------------------------
-@app.route('/get_urls', methods=['GET','POST'])
+@app.route('/get_urls', methods=['GET', 'POST'])
 def get_urls():
     data = {}
     with app.app_context():
@@ -268,7 +270,7 @@ def get_urls():
                                   'url': url,
                                   'count_blocks': count_blocks,
                                   'count_labels': count_labels,
-                                  'n': i+1})
+                                  'n': i + 1})
 
         cur.execute('''SELECT count(1) as count_blocks, count(b.label) as count_labels
                        FROM urls u JOIN blocks b ON u.id_url=b.id_url''')
@@ -287,7 +289,8 @@ def detect():
         conn = get_db('blocks')
         cur = conn.cursor()
         id_url = request.values.get('id_url', type=int)
-        cur.execute('''SELECT content FROM urls WHERE id_url=:id_url''', {'id_url': id_url})
+        cur.execute('''SELECT content FROM urls WHERE id_url=:id_url''',
+                    {'id_url': id_url})
         content = cur.fetchone()[0]
         labels = predictor(content)
         scores = predictor(content, 'scores')
@@ -307,39 +310,40 @@ def clear_page():
         conn = get_db('blocks')
         cur = conn.cursor()
         id_url = request.values.get('id_url', type=int)
-        cur.execute('''DELETE FROM blocks WHERE id_url=:id_url''', {'id_url': id_url})
+        cur.execute('''DELETE FROM blocks WHERE id_url=:id_url''',
+                    {'id_url': id_url})
         conn.commit()
         data['id_url'] = id_url
 
     return redirect(url_for('index', **data))
 
 
-# ------------------------------------------------
-# Удаление страницы полностью из базы
-# ------------------------------------------------
 @app.route('/delete_page', methods=['GET'])
 def delete_page():
+    """
+    DELETE page from database
+    :return: None
+    """
     data = {}
     with app.app_context():
         conn = get_db('blocks')
         cur = conn.cursor()
         id_url = request.values.get('id_url', type=int)
-        cur.execute('''DELETE FROM blocks WHERE id_url=:id_url''', {'id_url': id_url})
-        cur.execute('''DELETE FROM urls WHERE id_url=:id_url''', {'id_url': id_url})
+        cur.execute('''DELETE FROM blocks WHERE id_url=:id_url''',
+                    {'id_url': id_url})
+        cur.execute('''DELETE FROM urls WHERE id_url=:id_url''',
+                    {'id_url': id_url})
         conn.commit()
 
     return redirect(url_for('index', **data))
 
 
-# ------------------------------------------------
-# Запуск локального девел-сервера
-# ------------------------------------------------
 if __name__ == '__main__':
-    # sess.init_app(app)
+    # TODO: подумать в строну flask click
     app.debug = True
-    app.run(port=8000, host='0.0.0.0', processes=4, threaded=False)
-
-    # sshtunnel -vtn -U tumanov_g -P tumanov_g -R 192.130.30.2:8000 -L 127.0.0.1:33000 -- 45.89.225.145
-    # screen jupyter lab --no-browser --ip 0.0.0.0 --port 10017
-    # jupyter lab list
-    # http://45.89.225.145:10017/?token=1dc6d66b7fa67285bf8e532330d54a492753b89af96145ff
+    app.run(
+        port=8000,
+        host='0.0.0.0',
+        processes=4,
+        threaded=False
+    )

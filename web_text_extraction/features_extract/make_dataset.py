@@ -1,19 +1,17 @@
 #!/usr/bin/env python
-import os, time, sys, sqlite3
-from pprint import pprint
+import sqlite3
+import sys
+
 import pandas as pd
 from fastai.basics import progress_bar
-from catboost import CatBoostClassifier
 
 sys.path.insert(0, '../lib')
-import element
-import http_get
 from get_features import get_features
 
 
 DATABASE_FILE = '../data/blocks.sqlite'
 COLUMNS_FILE = '../data/columns.csv'
-OUTPUT_FILE = '../data/features.json.gzip'
+OUTPUT_FILE = '../../data/features.json.gzip'
 DROPCOLS_FILE = '../data/drop_cols.csv'
 DROP_THRESHOLD = 0.004
 
