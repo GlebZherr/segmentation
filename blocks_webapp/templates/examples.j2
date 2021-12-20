@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru" class="h-100">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Web-blocks labeling tool{% endblock %}</title>
+    <script type=text/javascript src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}"></script>
+    <script type=text/javascript src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/flatly/bootstrap.min.css') }}" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <style type="text/css">
+        .form-group.position-relative input {
+          padding-right: 32px;
+        }
+        .form-clear {
+          align-items: center;
+          background: #EEE;
+          border-radius: 50% !important;
+          bottom: 8px;
+          color: rgba(0, 0, 0, .54);
+          cursor: pointer;
+          display: flex;
+          height: 24px;
+          justify-content: center;
+          position: absolute;
+          right: 5px;
+          width: 24px;
+          z-index: 101;
+          top: 8px;
+        }
+        .form-text+.form-clear {
+          bottom: calc(1rem + 18px);
+        }
+        .form-clear .bi-x {
+          font-size: 16px;
+          font-weight: 500;
+        }
+        .rotate-90 {
+            transform: rotate(-180deg);
+            writing-mode: vertical-lr;
+            padding: 0 16px;
+        }
+        .checkbox {
+            padding: 8px;
+        }
+        table.tip tr {
+            text-align: left;
+        }
+        table.tip td, table.tip th {
+            padding: 2px 3px;
+        }
+    </style>
+    <script type="text/javascript">
+        var colors_map = new Map([
+            ["none",        "light"],
+            ["header",      "danger"],
+            ["subheader",   "warning"],
+            ["content",     "info"],
+            ["date",        "success"],
+            ["summary",     "dark"],
+        ]);
+    </script>
+</head>
+<body>
+
+{% macro menu_item(endpoint, text) %}
+    {% if request.endpoint == endpoint %}
+        <li class="nav-item">
+            <a class="nav-link active link-light" aria-current="page" href="{{ url_for(endpoint) }}">{{text}}</a>
+        </li>
+    {% else %}
+        <li class="nav-item">
+            <a class="nav-link link-light" href="{{ url_for(endpoint) }}">{{text}}</a>
+        </li>
+    {% endif %}
+{% endmacro %}
+
+<nav class="navbar navbar-expand-lg bg-dark py-1 px-2">
+    <div class="container-fluid">
+        <ul class="navbar-nav me-auto mb-0 mb-lg-0">
+            {{ menu_item('index', 'Tool') }}
+            {{ menu_item('examples', 'Examples') }}
+        </ul>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>Examples</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+          {% if domains %}
+            <ol class="list-group list-group-numbered">
+            {% for d in domains %}
+                <li class="list-group-item d-flex justify-content-between align-items-start list-group-item-action">
+                    <div class="ms-2 me-auto">
+                        <a class="fw-bold" href="{{url_for('example_items', domain=d.name)}}">{{d.name}}</a>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">{{d.count}}</span>
+                </li>
+            {% endfor %}
+            </ol>
+          {% endif %}
+
+          {% if items %}
+            <div class="accordion" id="accordionExample">
+                {% for i in items %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-{{i.id_page}}">
+                          <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{i.id_page}}"
+                            aria-expanded="true" aria-controls="collapse-{{i.id_page}}" aria-expanded="false">
+                            {{i.url}}
+                          </button>
+                        </h2>
+                        <div id="collapse-{{i.id_page}}" class="accordion-collapse collapse" aria-labelledby="heading-{{i.id_page}}" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <div><a target="_blank" href="{{i.url}}">Link</a></div>
+                                {{i.text}}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script type="text/javascript">
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+log/
+*.sqlite
+*.csv
+*.log
+*.json
+*.gz
