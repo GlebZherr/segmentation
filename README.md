@@ -1,5 +1,4 @@
-# segmentation
-Web text extraction tool
+# Web text extraction tool
 
 ## Основной pipeline
 
